@@ -21,8 +21,8 @@ public class MainActivity extends AppCompatActivity implements PWSocketClientLis
         this.client = new PWSocketCilent("DEMO");
         this.client.setHost("123.56.76.216");
         this.client.setPort(60000);
-        this.client.setReadTimeout(5000);
-        this.client.setWriteTimeout(5000);
+        this.client.setReadTimeout(3);
+        this.client.setWriteTimeout(3);
         this.client.setConnectTimeout(5000);
         this.client.setListener(this);
     }

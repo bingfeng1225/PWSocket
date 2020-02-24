@@ -22,6 +22,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.concurrent.DefaultPromise;
 
 public class PWSocketCilent {
@@ -148,10 +149,10 @@ public class PWSocketCilent {
             @Override
             public void run() {
                 if (PWSocketCilent.this.canReconnect()) {
-                    PWLogger.e(this + " reconnect");
+                    PWLogger.e(PWSocketCilent.this + " reconnect");
                     PWSocketCilent.this.connect();
                 } else {
-                    PWLogger.e(this + " already disabled,can not reconnect");
+                    PWLogger.e(PWSocketCilent.this + " already disabled,can not reconnect");
                 }
             }
         }, 2L, TimeUnit.SECONDS);
@@ -183,7 +184,7 @@ public class PWSocketCilent {
         channel.pipeline().addLast(new MessageDecoder(this));
         channel.pipeline().addLast(new MessageEncoder(this));
         channel.pipeline().addLast(new MessageListener(this));
-
+        channel.pipeline().addFirst(new IdleStateHandler(this.readTimeout, this.writeTimeout, 0));
     }
 
     public void onChannelActive() {

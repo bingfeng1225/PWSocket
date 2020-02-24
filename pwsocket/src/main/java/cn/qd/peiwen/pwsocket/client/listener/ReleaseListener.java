@@ -4,8 +4,6 @@ import java.lang.ref.WeakReference;
 
 import cn.qd.peiwen.pwsocket.client.PWSocketCilent;
 import cn.qd.peiwen.pwtools.EmptyUtils;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.GenericFutureListener;
 
