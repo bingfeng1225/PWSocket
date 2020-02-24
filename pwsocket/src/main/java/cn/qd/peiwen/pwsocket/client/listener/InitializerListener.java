@@ -1,7 +1,10 @@
 package cn.qd.peiwen.pwsocket.client.listener;
 
+import java.lang.ref.WeakReference;
+
 import cn.qd.peiwen.pwlogger.PWLogger;
 import cn.qd.peiwen.pwsocket.client.PWSocketCilent;
+import cn.qd.peiwen.pwtools.EmptyUtils;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.socket.SocketChannel;
 
@@ -10,15 +13,16 @@ import io.netty.channel.socket.SocketChannel;
  */
 
 public class InitializerListener extends ChannelInitializer<SocketChannel> {
-    private PWSocketCilent client;
+    private WeakReference<PWSocketCilent> client;
 
     public InitializerListener(PWSocketCilent client) {
-        super();
-        this.client = client;
+        this.client = new WeakReference<>(client);
     }
 
     @Override
     protected void initChannel(SocketChannel ch) throws Exception {
-        this.client.onInitChannel(ch);
+        if(EmptyUtils.isNotEmpty(this.client)) {
+            this.client.get().onInitChannel(ch);
+        }
     }
 }

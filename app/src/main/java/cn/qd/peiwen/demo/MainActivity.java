@@ -3,10 +3,13 @@ package cn.qd.peiwen.demo;
 import androidx.appcompat.app.AppCompatActivity;
 import cn.qd.peiwen.pwsocket.client.PWSocketCilent;
 import cn.qd.peiwen.pwsocket.client.PWSocketClientListener;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 
 import android.os.Bundle;
 import android.view.View;
+
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements PWSocketClientListener {
 
@@ -18,7 +21,9 @@ public class MainActivity extends AppCompatActivity implements PWSocketClientLis
         this.client = new PWSocketCilent("DEMO");
         this.client.setHost("123.56.76.216");
         this.client.setPort(60000);
-        this.client.setTimeout(5000);
+        this.client.setReadTimeout(5000);
+        this.client.setWriteTimeout(5000);
+        this.client.setConnectTimeout(5000);
         this.client.setListener(this);
     }
 
@@ -91,6 +96,16 @@ public class MainActivity extends AppCompatActivity implements PWSocketClientLis
 
     @Override
     public void onSocketClientMessageReceived(PWSocketCilent client, ChannelHandlerContext ctx, Object msg) {
+
+    }
+
+    @Override
+    public void onSocketClientMessageEncode(PWSocketCilent client, ChannelHandlerContext ctx, Object msg, ByteBuf out) {
+
+    }
+
+    @Override
+    public void onSocketClientMessageDecode(PWSocketCilent client, ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
 
     }
 }

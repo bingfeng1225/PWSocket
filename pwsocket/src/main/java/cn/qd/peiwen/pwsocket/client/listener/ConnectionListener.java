@@ -1,7 +1,10 @@
 package cn.qd.peiwen.pwsocket.client.listener;
 
+import java.lang.ref.WeakReference;
+
 import cn.qd.peiwen.pwlogger.PWLogger;
 import cn.qd.peiwen.pwsocket.client.PWSocketCilent;
+import cn.qd.peiwen.pwtools.EmptyUtils;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 
@@ -10,14 +13,16 @@ import io.netty.channel.ChannelFutureListener;
  */
 
 public class ConnectionListener implements ChannelFutureListener {
-    private PWSocketCilent client;
+    private WeakReference<PWSocketCilent> client;
 
     public ConnectionListener(PWSocketCilent client) {
-        this.client = client;
+        this.client = new WeakReference<>(client);
     }
 
     @Override
     public void operationComplete(ChannelFuture future) throws Exception {
-        this.client.onConnectOperationCompleted(future);
+        if(EmptyUtils.isNotEmpty(this.client)) {
+            this.client.get().onConnectOperationCompleted(future);
+        }
     }
 }

@@ -1,15 +1,19 @@
 package cn.qd.peiwen.pwsocket.client;
 
 import java.lang.ref.WeakReference;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import cn.qd.peiwen.pwlogger.PWLogger;
+import cn.qd.peiwen.pwsocket.client.codec.MessageDecoder;
+import cn.qd.peiwen.pwsocket.client.codec.MessageEncoder;
 import cn.qd.peiwen.pwsocket.client.listener.ConnectionListener;
 import cn.qd.peiwen.pwsocket.client.listener.InitializerListener;
 import cn.qd.peiwen.pwsocket.client.listener.MessageListener;
 import cn.qd.peiwen.pwsocket.client.listener.ReleaseListener;
 import cn.qd.peiwen.pwtools.EmptyUtils;
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -23,9 +27,11 @@ import io.netty.util.concurrent.DefaultPromise;
 public class PWSocketCilent {
     private int state;
     private int port = 0;
-    private int timeout = 0;
     private final String name;
     private String host = null;
+    private int readTimeout = 0;
+    private int writeTimeout = 0;
+    private int connectTimeout = 0;
     private boolean enable = false;
 
     private Channel channel;
@@ -62,12 +68,28 @@ public class PWSocketCilent {
         this.host = host;
     }
 
-    public int getTimeout() {
-        return timeout;
+    public int getReadTimeout() {
+        return readTimeout;
     }
 
-    public void setTimeout(int timeout) {
-        this.timeout = timeout;
+    public void setReadTimeout(int readTimeout) {
+        this.readTimeout = readTimeout;
+    }
+
+    public int getWriteTimeout() {
+        return writeTimeout;
+    }
+
+    public void setWriteTimeout(int writeTimeout) {
+        this.writeTimeout = writeTimeout;
+    }
+
+    public int getConnectTimeout() {
+        return connectTimeout;
+    }
+
+    public void setConnectTimeout(int connectTimeout) {
+        this.connectTimeout = connectTimeout;
     }
 
     public void setListener(PWSocketClientListener listener) {
@@ -121,15 +143,15 @@ public class PWSocketCilent {
     }
 
     public void reconnect() {
-        PWLogger.e("PWSocket(" + name + ") will reconnect in two seconds");
+        PWLogger.e(this +" will reconnect in two seconds");
         this.eventLoopGroup.schedule(new Runnable() {
             @Override
             public void run() {
                 if (PWSocketCilent.this.canReconnect()) {
-                    PWLogger.e("PWSocket(" + name + ") reconnect");
+                    PWLogger.e(this + " reconnect");
                     PWSocketCilent.this.connect();
                 } else {
-                    PWLogger.e("PWSocket(" + name + ") already disabled,can not reconnect");
+                    PWLogger.e(this + " already disabled,can not reconnect");
                 }
             }
         }, 2L, TimeUnit.SECONDS);
@@ -139,8 +161,8 @@ public class PWSocketCilent {
         if (this.canConnect()) {
             this.enable = true;
             this.changeSocketState(PW_SOCKET_CLIENT_STATE_CONNECTING);
-            if (this.timeout > 0) {
-                this.bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, this.timeout);
+            if (this.connectTimeout > 0) {
+                this.bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, this.connectTimeout);
             }
             ChannelFuture future = this.bootstrap.connect(this.host, this.port);
             future.addListener(new ConnectionListener(this));
@@ -157,45 +179,70 @@ public class PWSocketCilent {
     }
 
     public void onInitChannel(SocketChannel channel) {
-        PWLogger.e("PWSocket(" + this.name + ") init channel");
+        PWLogger.e(this + " init channel");
+        channel.pipeline().addLast(new MessageDecoder(this));
+        channel.pipeline().addLast(new MessageEncoder(this));
         channel.pipeline().addLast(new MessageListener(this));
+
     }
 
     public void onChannelActive() {
-        PWLogger.e("PWSocket(" + this.name + ") channel active");
+        PWLogger.e(this + " channel active");
         this.changeSocketState(PW_SOCKET_CLIENT_STATE_CONNECTED);
     }
 
     public void onChannelInactive() {
-        PWLogger.e("PWSocket(" + this.name + ") channel inactive");
+        PWLogger.e(this + " channel inactive");
         this.changeSocketState(PW_SOCKET_CLIENT_STATE_DISCONNECTED);
     }
 
     public void onReadTimeout(ChannelHandlerContext ctx) {
-        PWLogger.e("PWSocket(" + this.name + ") read timeout");
+        PWLogger.e(this + " read timeout");
         if (EmptyUtils.isNotEmpty(this.listener)) {
             this.listener.get().onSocketClientReadTimeout(this, ctx);
         }
     }
 
     public void onWriteTimeout(ChannelHandlerContext ctx) {
-        PWLogger.e("PWSocket(" + this.name + ") write timeout");
+        PWLogger.e(this + " write timeout");
         if (EmptyUtils.isNotEmpty(this.listener)) {
             this.listener.get().onSocketClientWriteTimeout(this, ctx);
         }
     }
 
     public void onConnectOperationCompleted(ChannelFuture future) {
-        PWLogger.e("PWSocket(" + this.name + ") connect operation completed:" + future.isSuccess());
+        PWLogger.e(this + " connect operation completed:" + future.isSuccess());
         if (!future.isSuccess()) {
             this.changeSocketState(PW_SOCKET_CLIENT_STATE_DISCONNECTED);
         }
     }
 
     public void onReleaseOperationCompleted(DefaultPromise promise) {
-        PWLogger.e("PWSocket(" + this.name + ") release operation completed:" + promise.isSuccess());
+        PWLogger.e(this + " release operation completed:" + promise.isSuccess());
         this.changeSocketState(PW_SOCKET_CLIENT_STATE_RELEASED);
     }
+
+    public void onChannelMessageReceived(ChannelHandlerContext ctx, Object msg) {
+        PWLogger.e(this + " channel message received");
+        if (EmptyUtils.isNotEmpty(this.listener)) {
+            this.listener.get().onSocketClientMessageReceived(this, ctx, msg);
+        }
+    }
+
+    public void onMessageEncode(ChannelHandlerContext ctx, Object msg, ByteBuf out) {
+        PWLogger.e(this + " message encode");
+        if (EmptyUtils.isNotEmpty(this.listener)) {
+            this.listener.get().onSocketClientMessageEncode(this, ctx, msg, out);
+        }
+    }
+
+    public void onMessageDecode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
+        PWLogger.e(this + " message decode");
+        if (EmptyUtils.isNotEmpty(this.listener)) {
+            this.listener.get().onSocketClientMessageDecode(this, ctx, in, out);
+        }
+    }
+
 
     private synchronized boolean canWrite() {
         return this.state == PW_SOCKET_CLIENT_STATE_CONNECTED;
@@ -280,5 +327,10 @@ public class PWSocketCilent {
                 }
                 break;
         }
+    }
+
+    @Override
+    public String toString() {
+        return "PWSocket(" + this.name + ")";
     }
 }
