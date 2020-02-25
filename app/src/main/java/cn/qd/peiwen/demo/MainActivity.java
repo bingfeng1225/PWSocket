@@ -1,19 +1,21 @@
 package cn.qd.peiwen.demo;
 
-import androidx.appcompat.app.AppCompatActivity;
-import cn.qd.peiwen.pwsocket.client.PWSocketCilent;
-import cn.qd.peiwen.pwsocket.client.PWSocketClientListener;
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandlerContext;
-
 import android.os.Bundle;
 import android.view.View;
 
 import java.util.List;
 
+import androidx.appcompat.app.AppCompatActivity;
+import cn.qd.peiwen.pwsocket.client.PWSocketCilent;
+import cn.qd.peiwen.pwsocket.client.PWSocketClientListener;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.socket.SocketChannel;
+
 public class MainActivity extends AppCompatActivity implements PWSocketClientListener {
 
     private PWSocketCilent client;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -21,8 +23,8 @@ public class MainActivity extends AppCompatActivity implements PWSocketClientLis
         this.client = new PWSocketCilent("DEMO");
         this.client.setHost("123.56.76.216");
         this.client.setPort(60000);
-        this.client.setReadTimeout(3);
-        this.client.setWriteTimeout(3);
+        this.client.setReadTimeout(10);
+        this.client.setWriteTimeout(10);
         this.client.setConnectTimeout(5000);
         this.client.setListener(this);
     }
@@ -36,7 +38,7 @@ public class MainActivity extends AppCompatActivity implements PWSocketClientLis
                 this.client.enable();
                 break;
             case R.id.button3://发送数据
-                this.client.write("test");
+                this.client.writeAndFlush("test");
                 break;
             case R.id.button4://关闭连接
                 this.client.disable();
@@ -69,7 +71,7 @@ public class MainActivity extends AppCompatActivity implements PWSocketClientLis
 
     @Override
     public void onSocketClientDisconnected(PWSocketCilent client) {
-        if(this.client.canReconnect()) {
+        if(this.client.isEnabled()) {
             this.client.reconnect();
         }
     }
@@ -85,6 +87,16 @@ public class MainActivity extends AppCompatActivity implements PWSocketClientLis
     }
 
     @Override
+    public boolean onSocketClientInitDecoder(PWSocketCilent client, SocketChannel channel) {
+        return false;
+    }
+
+    @Override
+    public boolean onSocketClientInitEncoder(PWSocketCilent client, SocketChannel channel) {
+        return false;
+    }
+
+    @Override
     public void onSocketClientReadTimeout(PWSocketCilent client, ChannelHandlerContext ctx) {
 
     }
@@ -95,17 +107,17 @@ public class MainActivity extends AppCompatActivity implements PWSocketClientLis
     }
 
     @Override
-    public void onSocketClientMessageReceived(PWSocketCilent client, ChannelHandlerContext ctx, Object msg) {
+    public void onSocketClientMessageReceived(PWSocketCilent client, ChannelHandlerContext ctx, Object msg) throws Exception {
 
     }
 
     @Override
-    public void onSocketClientMessageEncode(PWSocketCilent client, ChannelHandlerContext ctx, Object msg, ByteBuf out) {
-
+    public void onSocketClientMessageEncode(PWSocketCilent client, ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
+        out.writeBytes(msg.toString().getBytes());
     }
 
     @Override
-    public void onSocketClientMessageDecode(PWSocketCilent client, ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
+    public void onSocketClientMessageDecode(PWSocketCilent client, ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
 
     }
 }

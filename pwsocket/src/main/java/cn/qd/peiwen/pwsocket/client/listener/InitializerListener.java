@@ -2,7 +2,6 @@ package cn.qd.peiwen.pwsocket.client.listener;
 
 import java.lang.ref.WeakReference;
 
-import cn.qd.peiwen.pwlogger.PWLogger;
 import cn.qd.peiwen.pwsocket.client.PWSocketCilent;
 import cn.qd.peiwen.pwtools.EmptyUtils;
 import io.netty.channel.ChannelInitializer;

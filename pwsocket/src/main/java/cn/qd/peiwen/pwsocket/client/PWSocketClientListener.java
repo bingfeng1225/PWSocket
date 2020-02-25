@@ -2,10 +2,9 @@ package cn.qd.peiwen.pwsocket.client;
 
 import java.util.List;
 
-import cn.qd.peiwen.pwlogger.PWLogger;
-import cn.qd.peiwen.pwtools.EmptyUtils;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.socket.SocketChannel;
 
 public interface PWSocketClientListener {
     void onSocketClientInitialized(PWSocketCilent client);
@@ -22,13 +21,18 @@ public interface PWSocketClientListener {
 
     void onSocketClientReleased(PWSocketCilent client);
 
+    boolean onSocketClientInitDecoder(PWSocketCilent client, SocketChannel channel);
+
+    boolean onSocketClientInitEncoder(PWSocketCilent client, SocketChannel channel);
+
     void onSocketClientReadTimeout(PWSocketCilent client, ChannelHandlerContext ctx);
 
     void onSocketClientWriteTimeout(PWSocketCilent client, ChannelHandlerContext ctx);
 
-    void onSocketClientMessageReceived(PWSocketCilent client, ChannelHandlerContext ctx, Object msg);
+    void onSocketClientMessageReceived(PWSocketCilent client, ChannelHandlerContext ctx, Object msg) throws Exception;
 
-    void onSocketClientMessageEncode(PWSocketCilent client, ChannelHandlerContext ctx, Object msg, ByteBuf out);
+    void onSocketClientMessageEncode(PWSocketCilent client, ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception;
 
-    void onSocketClientMessageDecode(PWSocketCilent client, ChannelHandlerContext ctx, ByteBuf in, List<Object> out);
+    void onSocketClientMessageDecode(PWSocketCilent client, ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception;
+
 }

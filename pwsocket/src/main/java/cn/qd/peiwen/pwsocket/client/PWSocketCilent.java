@@ -40,7 +40,7 @@ public class PWSocketCilent {
     private EventLoopGroup eventLoopGroup;
     private WeakReference<PWSocketClientListener> listener;
 
-    public static final int PW_SOCKET_CLIENT_STATE_INITIALIZED = 0;
+    public static final int PW_SOCKET_CLIENT_STATE_IDLE = 0;
     public static final int PW_SOCKET_CLIENT_STATE_CONNECTING = 1;
     public static final int PW_SOCKET_CLIENT_STATE_CONNECTED = 2;
     public static final int PW_SOCKET_CLIENT_STATE_DISCONNECTING = 3;
@@ -97,8 +97,8 @@ public class PWSocketCilent {
         this.listener = new WeakReference<>(listener);
     }
 
-    public synchronized void init() {
-        if (this.canInitialize()) {
+    public void init() {
+        if (this.isReleased()) {
             this.bootstrap = new Bootstrap();
             this.eventLoopGroup = new NioEventLoopGroup();
             this.bootstrap.group(this.eventLoopGroup);
@@ -106,25 +106,26 @@ public class PWSocketCilent {
             this.bootstrap.handler(new InitializerListener(this));
             this.bootstrap.option(ChannelOption.TCP_NODELAY, true);
             this.bootstrap.option(ChannelOption.SO_KEEPALIVE, true);
-            this.changeSocketState(PW_SOCKET_CLIENT_STATE_INITIALIZED);
+            this.changeSocketState(PW_SOCKET_CLIENT_STATE_IDLE);
         }
     }
 
-    public synchronized void enable() {
-        if (!this.enable) {
+    public void enable() {
+        if (this.isInitialized() && !this.enable) {
+            this.enable = true;
             this.connect();
         }
     }
 
-    public synchronized void disable() {
-        if (this.enable) {
+    public void disable() {
+        if (this.isInitialized() && this.enable) {
+            this.enable = false;
             this.disconnect();
         }
     }
 
-    public synchronized void release() {
-        if (this.canRelease()) {
-            this.enable = false;
+    public void release() {
+        if (this.isInitialized()) {
             this.changeSocketState(PW_SOCKET_CLIENT_STATE_RELEASEING);
             DefaultPromise promise = (DefaultPromise) this.eventLoopGroup.shutdownGracefully();
             promise.addListener(new ReleaseListener(this));
@@ -132,57 +133,161 @@ public class PWSocketCilent {
     }
 
     public void write(Object msg) {
-        if (this.canWrite()) {
+        if (this.isWriteAble()) {
             this.channel.write(msg);
         }
     }
 
     public void writeAndFlush(Object msg) {
-        if (this.canWrite()) {
+        if (this.isWriteAble()) {
             this.channel.writeAndFlush(msg);
         }
     }
 
-    public void reconnect() {
-        PWLogger.e(this +" will reconnect in two seconds");
-        this.eventLoopGroup.schedule(new Runnable() {
-            @Override
-            public void run() {
-                if (PWSocketCilent.this.canReconnect()) {
-                    PWLogger.e(PWSocketCilent.this + " reconnect");
-                    PWSocketCilent.this.connect();
-                } else {
-                    PWLogger.e(PWSocketCilent.this + " already disabled,can not reconnect");
-                }
-            }
-        }, 2L, TimeUnit.SECONDS);
-    }
-
     private void connect() {
-        if (this.canConnect()) {
-            this.enable = true;
+        if (this.isConnectAble()) {
             this.changeSocketState(PW_SOCKET_CLIENT_STATE_CONNECTING);
             if (this.connectTimeout > 0) {
                 this.bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, this.connectTimeout);
             }
             ChannelFuture future = this.bootstrap.connect(this.host, this.port);
-            future.addListener(new ConnectionListener(this));
             this.channel = future.channel();
+            future.addListener(new ConnectionListener(this));
         }
     }
 
+    public void reconnect() {
+        PWLogger.e(this + " will reconnect in two seconds");
+        this.eventLoopGroup.schedule(new Runnable() {
+            @Override
+            public void run() {
+                if (PWSocketCilent.this.isEnabled()) {
+                    PWLogger.e(PWSocketCilent.this + " reconnect");
+                    PWSocketCilent.this.connect();
+                } else {
+                    PWLogger.e(PWSocketCilent.this + " already disabled");
+                }
+            }
+        }, 2L, TimeUnit.SECONDS);
+    }
+
     private void disconnect() {
-        if (this.canDisconnect()) {
-            this.enable = false;
+        if (this.isDisonnectAble()) {
             this.changeSocketState(PW_SOCKET_CLIENT_STATE_DISCONNECTING);
             this.channel.close();
         }
     }
 
+    public boolean isEnabled() {
+        return this.enable;
+    }
+
+    private boolean isReleased() {
+        return this.state == PW_SOCKET_CLIENT_STATE_RELEASED;
+    }
+
+    private boolean isInitialized() {
+        return this.state != PW_SOCKET_CLIENT_STATE_RELEASEING
+                && this.state != PW_SOCKET_CLIENT_STATE_RELEASED;
+    }
+
+    private boolean isWriteAble() {
+        return this.state == PW_SOCKET_CLIENT_STATE_CONNECTED;
+    }
+
+    private boolean isConnectAble() {
+        return (this.state == PW_SOCKET_CLIENT_STATE_IDLE)
+                || (this.state == PW_SOCKET_CLIENT_STATE_DISCONNECTED);
+    }
+
+    private boolean isDisonnectAble() {
+        return (this.state == PW_SOCKET_CLIENT_STATE_CONNECTING)
+                || (this.state == PW_SOCKET_CLIENT_STATE_CONNECTED);
+    }
+
+    private synchronized void changeSocketState(int state) {
+        if (this.state == state) {
+            return;
+        }
+        switch (state) {
+            case PW_SOCKET_CLIENT_STATE_IDLE:
+                this.state = state;
+                this.enable = false;
+                PWLogger.e("PWSocket(" + name + ") state: IDLE");
+                if (EmptyUtils.isNotEmpty(this.listener)) {
+                    this.listener.get().onSocketClientInitialized(this);
+                }
+                break;
+            case PW_SOCKET_CLIENT_STATE_CONNECTING:
+                this.state = state;
+                PWLogger.e("PWSocket(" + name + ") state: CONNECTING");
+                if (EmptyUtils.isNotEmpty(this.listener)) {
+                    this.listener.get().onSocketClientConnecting(this);
+                }
+                break;
+            case PW_SOCKET_CLIENT_STATE_CONNECTED:
+                this.state = state;
+                PWLogger.e("PWSocket(" + name + ") state: CONNECTED");
+                if (EmptyUtils.isNotEmpty(this.listener)) {
+                    this.listener.get().onSocketClientConnected(this);
+                }
+                break;
+            case PW_SOCKET_CLIENT_STATE_DISCONNECTING:
+                this.state = state;
+                PWLogger.e("PWSocket(" + name + ") state: DISCONNECTING");
+                if (EmptyUtils.isNotEmpty(this.listener)) {
+                    this.listener.get().onSocketClientDisconnecting(this);
+                }
+                break;
+            case PW_SOCKET_CLIENT_STATE_DISCONNECTED:
+                this.state = state;
+                PWLogger.e("PWSocket(" + name + ") state: DISCONNECTED");
+                if (EmptyUtils.isNotEmpty(this.listener)) {
+                    this.listener.get().onSocketClientDisconnected(this);
+                }
+                break;
+            case PW_SOCKET_CLIENT_STATE_RELEASEING:
+                this.state = state;
+                this.enable = false;
+                PWLogger.e("PWSocket(" + name + ") state: RELEASEING");
+                if (EmptyUtils.isNotEmpty(this.listener)) {
+                    this.listener.get().onSocketClientReleaseing(this);
+                }
+                break;
+            case PW_SOCKET_CLIENT_STATE_RELEASED:
+                this.state = state;
+                PWLogger.e("PWSocket(" + name + ") state: RELEASED");
+                if (EmptyUtils.isNotEmpty(this.listener)) {
+                    this.listener.get().onSocketClientReleased(this);
+                }
+                break;
+        }
+    }
+
     public void onInitChannel(SocketChannel channel) {
         PWLogger.e(this + " init channel");
-        channel.pipeline().addLast(new MessageDecoder(this));
-        channel.pipeline().addLast(new MessageEncoder(this));
+        /**
+         *  用于用户自定义编解码器
+         *  如果用户自定义编解码器,返回True
+         *  如果不定义返回False,使用默认编解码器
+         *  使用默认编解码器需实现:
+         *  onMessageDecode：将接收信息解析
+         *  onMessageEncode：将发送信息封装成字节流写入
+         */
+        boolean result = false;
+        if (EmptyUtils.isNotEmpty(this.listener)) {
+            result = this.listener.get().onSocketClientInitDecoder(this, channel);
+        }
+        if (!result) {
+            channel.pipeline().addLast(new MessageDecoder(this));
+        }
+
+        if (EmptyUtils.isNotEmpty(this.listener)) {
+            result = this.listener.get().onSocketClientInitEncoder(this, channel);
+        }
+        if (!result) {
+            channel.pipeline().addLast(new MessageEncoder(this));
+        }
         channel.pipeline().addLast(new MessageListener(this));
         channel.pipeline().addFirst(new IdleStateHandler(this.readTimeout, this.writeTimeout, 0));
     }
@@ -223,110 +328,24 @@ public class PWSocketCilent {
         this.changeSocketState(PW_SOCKET_CLIENT_STATE_RELEASED);
     }
 
-    public void onChannelMessageReceived(ChannelHandlerContext ctx, Object msg) {
+    public void onChannelMessageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
         PWLogger.e(this + " channel message received");
         if (EmptyUtils.isNotEmpty(this.listener)) {
             this.listener.get().onSocketClientMessageReceived(this, ctx, msg);
         }
     }
 
-    public void onMessageEncode(ChannelHandlerContext ctx, Object msg, ByteBuf out) {
+    public void onMessageEncode(ChannelHandlerContext ctx, Object msg, ByteBuf out) throws Exception {
         PWLogger.e(this + " message encode");
         if (EmptyUtils.isNotEmpty(this.listener)) {
             this.listener.get().onSocketClientMessageEncode(this, ctx, msg, out);
         }
     }
 
-    public void onMessageDecode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
+    public void onMessageDecode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         PWLogger.e(this + " message decode");
         if (EmptyUtils.isNotEmpty(this.listener)) {
             this.listener.get().onSocketClientMessageDecode(this, ctx, in, out);
-        }
-    }
-
-
-    private synchronized boolean canWrite() {
-        return this.state == PW_SOCKET_CLIENT_STATE_CONNECTED;
-    }
-
-    private synchronized boolean canConnect() {
-        return (this.state == PW_SOCKET_CLIENT_STATE_INITIALIZED) || (this.state == PW_SOCKET_CLIENT_STATE_DISCONNECTED);
-    }
-
-    public synchronized boolean canReconnect() {
-        return this.enable;
-    }
-
-    private synchronized boolean canDisconnect() {
-        return (this.state == PW_SOCKET_CLIENT_STATE_CONNECTING) || (this.state == PW_SOCKET_CLIENT_STATE_CONNECTED);
-    }
-
-    private synchronized boolean canInitialize() {
-        return this.state == PW_SOCKET_CLIENT_STATE_RELEASED;
-    }
-
-    private synchronized boolean canRelease() {
-        return (this.state != PW_SOCKET_CLIENT_STATE_RELEASEING) && (this.state != PW_SOCKET_CLIENT_STATE_RELEASED);
-    }
-
-    private synchronized boolean isReleaseing() {
-        return (this.state == PW_SOCKET_CLIENT_STATE_RELEASEING);
-    }
-
-    private synchronized void changeSocketState(int state) {
-        if (this.state == state) {
-            return;
-        }
-        switch (state) {
-            case PW_SOCKET_CLIENT_STATE_INITIALIZED:
-                this.state = state;
-                PWLogger.e("PWSocket(" + name + ") state: INITIALIZED");
-                if (EmptyUtils.isNotEmpty(this.listener)) {
-                    this.listener.get().onSocketClientInitialized(this);
-                }
-                break;
-            case PW_SOCKET_CLIENT_STATE_CONNECTING:
-                this.state = state;
-                PWLogger.e("PWSocket(" + name + ") state: CONNECTING");
-                if (EmptyUtils.isNotEmpty(this.listener)) {
-                    this.listener.get().onSocketClientConnecting(this);
-                }
-                break;
-            case PW_SOCKET_CLIENT_STATE_CONNECTED:
-                this.state = state;
-                PWLogger.e("PWSocket(" + name + ") state: CONNECTED");
-                if (EmptyUtils.isNotEmpty(this.listener)) {
-                    this.listener.get().onSocketClientConnected(this);
-                }
-                break;
-            case PW_SOCKET_CLIENT_STATE_DISCONNECTING:
-                this.state = state;
-                PWLogger.e("PWSocket(" + name + ") state: DISCONNECTING");
-                if (EmptyUtils.isNotEmpty(this.listener)) {
-                    this.listener.get().onSocketClientDisconnecting(this);
-                }
-                break;
-            case PW_SOCKET_CLIENT_STATE_DISCONNECTED:
-                this.state = state;
-                PWLogger.e("PWSocket(" + name + ") state: DISCONNECTED");
-                if (EmptyUtils.isNotEmpty(this.listener)) {
-                    this.listener.get().onSocketClientDisconnected(this);
-                }
-                break;
-            case PW_SOCKET_CLIENT_STATE_RELEASEING:
-                this.state = state;
-                PWLogger.e("PWSocket(" + name + ") state: RELEASEING");
-                if (EmptyUtils.isNotEmpty(this.listener)) {
-                    this.listener.get().onSocketClientReleaseing(this);
-                }
-                break;
-            case PW_SOCKET_CLIENT_STATE_RELEASED:
-                this.state = state;
-                PWLogger.e("PWSocket(" + name + ") state: RELEASED");
-                if (EmptyUtils.isNotEmpty(this.listener)) {
-                    this.listener.get().onSocketClientReleased(this);
-                }
-                break;
         }
     }
 
