@@ -6,6 +6,7 @@ import android.view.View;
 import java.util.List;
 
 import androidx.appcompat.app.AppCompatActivity;
+import cn.qd.peiwen.pwlogger.PWLogger;
 import cn.qd.peiwen.pwsocket.client.PWSocketCilent;
 import cn.qd.peiwen.pwsocket.client.PWSocketClientListener;
 import io.netty.buffer.ByteBuf;
@@ -49,6 +50,7 @@ public class MainActivity extends AppCompatActivity implements PWSocketClientLis
         }
     }
 
+    private long time = 0;
     @Override
     public void onSocketClientInitialized(PWSocketCilent client) {
 
@@ -56,7 +58,7 @@ public class MainActivity extends AppCompatActivity implements PWSocketClientLis
 
     @Override
     public void onSocketClientConnecting(PWSocketCilent client) {
-
+        this.time = System.currentTimeMillis();
     }
 
     @Override
@@ -71,6 +73,7 @@ public class MainActivity extends AppCompatActivity implements PWSocketClientLis
 
     @Override
     public void onSocketClientDisconnected(PWSocketCilent client) {
+        PWLogger.e(client + " connect time " + (System.currentTimeMillis() - this.time));
         if(this.client.isEnabled()) {
             this.client.reconnect();
         }

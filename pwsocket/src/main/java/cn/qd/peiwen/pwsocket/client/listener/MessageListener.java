@@ -2,6 +2,7 @@ package cn.qd.peiwen.pwsocket.client.listener;
 
 import java.lang.ref.WeakReference;
 
+import cn.qd.peiwen.pwlogger.PWLogger;
 import cn.qd.peiwen.pwsocket.client.PWSocketCilent;
 import cn.qd.peiwen.pwtools.EmptyUtils;
 import io.netty.channel.ChannelHandlerContext;
@@ -30,6 +31,12 @@ public class MessageListener extends SimpleChannelInboundHandler {
         if(EmptyUtils.isNotEmpty(this.client)) {
             this.client.get().onChannelInactive();
         }
+    }
+
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        PWLogger.e(cause);
+        super.exceptionCaught(ctx, cause);
     }
 
     @Override
