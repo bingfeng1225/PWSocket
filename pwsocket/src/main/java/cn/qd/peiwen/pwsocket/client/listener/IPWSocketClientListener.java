@@ -1,12 +1,13 @@
-package cn.qd.peiwen.pwsocket.client;
+package cn.qd.peiwen.pwsocket.client.listener;
 
 import java.util.List;
 
+import cn.qd.peiwen.pwsocket.client.PWSocketCilent;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.SocketChannel;
 
-public interface PWSocketClientListener {
+public interface IPWSocketClientListener {
     void onSocketClientInitialized(PWSocketCilent client);
 
     void onSocketClientConnecting(PWSocketCilent client);

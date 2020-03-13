@@ -1,4 +1,4 @@
-package cn.qd.peiwen.pwsocket.client.codec;
+package cn.qd.peiwen.pwsocket.client.netty.codec;
 
 import java.lang.ref.WeakReference;
 

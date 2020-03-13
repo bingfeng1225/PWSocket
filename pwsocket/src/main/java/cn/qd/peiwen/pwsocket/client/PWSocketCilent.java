@@ -5,12 +5,13 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import cn.qd.peiwen.pwlogger.PWLogger;
-import cn.qd.peiwen.pwsocket.client.codec.MessageDecoder;
-import cn.qd.peiwen.pwsocket.client.codec.MessageEncoder;
-import cn.qd.peiwen.pwsocket.client.listener.ConnectionListener;
-import cn.qd.peiwen.pwsocket.client.listener.InitializerListener;
-import cn.qd.peiwen.pwsocket.client.listener.MessageListener;
-import cn.qd.peiwen.pwsocket.client.listener.ReleaseListener;
+import cn.qd.peiwen.pwsocket.client.listener.IPWSocketClientListener;
+import cn.qd.peiwen.pwsocket.client.netty.codec.MessageDecoder;
+import cn.qd.peiwen.pwsocket.client.netty.codec.MessageEncoder;
+import cn.qd.peiwen.pwsocket.client.netty.listener.ConnectionListener;
+import cn.qd.peiwen.pwsocket.client.netty.listener.InitializerListener;
+import cn.qd.peiwen.pwsocket.client.netty.listener.MessageListener;
+import cn.qd.peiwen.pwsocket.client.netty.listener.ReleaseListener;
 import cn.qd.peiwen.pwtools.EmptyUtils;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
@@ -38,7 +39,7 @@ public class PWSocketCilent {
     private Channel channel;
     private Bootstrap bootstrap;
     private EventLoopGroup eventLoopGroup;
-    private WeakReference<PWSocketClientListener> listener;
+    private WeakReference<IPWSocketClientListener> listener;
 
     public static final int PW_SOCKET_CLIENT_STATE_IDLE = 0;
     public static final int PW_SOCKET_CLIENT_STATE_CONNECTING = 1;
@@ -93,7 +94,7 @@ public class PWSocketCilent {
         this.connectTimeout = connectTimeout;
     }
 
-    public void setListener(PWSocketClientListener listener) {
+    public void setListener(IPWSocketClientListener listener) {
         this.listener = new WeakReference<>(listener);
     }
 

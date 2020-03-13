@@ -1,4 +1,4 @@
-package cn.qd.peiwen.pwsocket.client.codec;
+package cn.qd.peiwen.pwsocket.client.netty.codec;
 
 import java.lang.ref.WeakReference;
 import java.util.List;
@@ -8,7 +8,6 @@ import cn.qd.peiwen.pwtools.EmptyUtils;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
-import io.netty.handler.codec.MessageToByteEncoder;
 
 public class MessageDecoder extends ByteToMessageDecoder {
     private WeakReference<PWSocketCilent> client;

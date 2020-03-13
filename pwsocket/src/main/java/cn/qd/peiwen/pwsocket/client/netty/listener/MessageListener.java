@@ -1,4 +1,4 @@
-package cn.qd.peiwen.pwsocket.client.listener;
+package cn.qd.peiwen.pwsocket.client.netty.listener;
 
 import java.lang.ref.WeakReference;
 
