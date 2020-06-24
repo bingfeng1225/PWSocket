@@ -7,8 +7,8 @@ import java.util.List;
 
 import androidx.appcompat.app.AppCompatActivity;
 import cn.qd.peiwen.pwlogger.PWLogger;
-import cn.qd.peiwen.pwsocket.client.PWSocketCilent;
-import cn.qd.peiwen.pwsocket.client.listener.IPWSocketClientListener;
+import cn.qd.peiwen.socket.PWSocketCilent;
+import cn.qd.peiwen.socket.IPWSocketClientListener;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.SocketChannel;

@@ -1,8 +1,7 @@
-package cn.qd.peiwen.pwsocket.client.listener;
+package cn.qd.peiwen.socket;
 
 import java.util.List;
 
-import cn.qd.peiwen.pwsocket.client.PWSocketCilent;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.SocketChannel;
