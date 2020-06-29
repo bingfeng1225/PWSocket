@@ -21,6 +21,8 @@ public interface IPWSocketClientListener {
 
     void onSocketClientReleased(PWSocketCilent client);
 
+    void onSocketClientExceptionCaught(PWSocketCilent client, Throwable throwable);
+
     boolean onSocketClientInitDecoder(PWSocketCilent client, SocketChannel channel);
 
     boolean onSocketClientInitEncoder(PWSocketCilent client, SocketChannel channel);

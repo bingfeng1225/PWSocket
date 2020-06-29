@@ -298,6 +298,12 @@ public class PWSocketCilent {
         }
     }
 
+    public void onExceptionCaught(Throwable throwable){
+        if (null != this.listener && null != this.listener.get()) {
+            this.listener.get().onSocketClientExceptionCaught(this, throwable);
+        }
+    }
+
     public void onConnectOperationCompleted(ChannelFuture future) {
         if (!future.isSuccess()) {
             this.changeSocketState(PW_SOCKET_CLIENT_STATE_DISCONNECTED);

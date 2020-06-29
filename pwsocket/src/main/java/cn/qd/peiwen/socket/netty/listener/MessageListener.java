@@ -16,6 +16,14 @@ public class MessageListener extends SimpleChannelInboundHandler {
     }
 
     @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+        super.exceptionCaught(ctx, cause);
+        if (null != this.client && null != this.client.get()) {
+            this.client.get().onExceptionCaught(cause);
+        }
+    }
+
+    @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         super.channelActive(ctx);
         if (null != this.client && null != this.client.get()) {
